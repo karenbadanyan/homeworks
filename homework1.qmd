@@ -57,7 +57,7 @@ flights %>%
   
 # Arrived more than two hours late, but didn't leave late
 flights %>%
-  filter(arr_delay >=120 & dep_delay <=0 )
+  filter(arr_delay >120 & dep_delay <=0 )
 
 # Were delayed by at least an hour, but made up over 30 minutes in flight
 flights %>%
@@ -79,31 +79,47 @@ flights %>%
 library(tidyverse)
 library(nycflights13)
 library(skimr)
-# What months had the highest and lowest % of cancelled flights?
+# table of cancelled flights
 cancelled_flights <- flights %>% 
   filter(is.na(dep_time))
 
+cancelled_flights
+
+# count of cancelled flights in each month
 grouped_cf <- cancelled_flights %>%
   group_by(month) %>%
   summarise(count_cf = n())
 
 grouped_cf
 
+# count of flights in each month
 grouped_f <- flights %>%
   group_by(month) %>%
   summarise(flight_count = n())
 
 grouped_f
 
+# joint table of cancelled flights and total flighte per month
 joint_table <- inner_join(grouped_cf, grouped_f, by = "month")
 
 joint_table
 
+# add column with percentage
 final_table <- joint_table %>%
-  mutate(percentage = 100*count_cf/flight_count) %>%
+  mutate(percentage = round(100*count_cf/flight_count,2)) %>%
   arrange(desc(percentage))
   
 final_table
+
+# month with highest proportion of cancelled flights
+max <- final_table %>%
+  slice_max(percentage)
+
+# month with lowest proportion of cancelled flights
+min <- final_table %>%
+  slice_min(percentage)
+
+# line graph with percentage of cancelled flights per month
 ggplot(final_table,aes(x=month,y=percentage))+geom_line()
 ```
 
@@ -116,14 +132,19 @@ library(tidyverse)
 library(nycflights13)
 library(skimr)
 
+# count of planes which travelled from NEW York City airports in 2013
 flights_2013 <- flights %>%
   filter(year ==2013 & (origin =="JFK"|origin =="EWR"|origin =="LGA")) %>%
   group_by(tailnum) %>%
   summarise(nycount = n())
 
-flights_2013 %>%
- arrange(desc(nycount)) 
+flights_2013
 
+# arrange the list in descending order
+flights_2013 %>%
+ arrange(desc(nycount))
+
+# left_join() the resulting table with the table planes
 left_join(planes, flights_2013, by="tailnum") %>%
   slice_max(nycount)
 ```
@@ -142,13 +163,14 @@ library(nycflights13)
 library(skimr)
 library(stats)
 
-#1
-jul <- weather %>%
-  filter(year ==2013 & month =="7")
+# 1st question - What is the distribution of temperature (`temp`) in July 2013? Identify any important outliers in terms of the `wind_speed` variable.
 
-jul%>%
+# filter only 2013 July data and have a look at the summary
+jul <- weather %>%
+  filter(year ==2013 & month =="7") %>%
   summary(jul)
 
+# filter only 2013 July data and count per temperature
 temp_jul <- weather %>%
   filter(year ==2013 & month =="7") %>%
   group_by(temp) %>%
@@ -156,25 +178,36 @@ temp_jul <- weather %>%
 
 temp_jul
 
+# contruct bar chart for the distribution of temperatures
 ggplot(temp_jul,aes(x=temp,y=temp_count))+geom_col()
 
+# filter only 2013 July data and count per wind speed
 windspeed_jul <- weather %>%
   filter(year ==2013 & month =="7") %>%
   group_by(wind_speed) %>%
   summarise(windspeed_count=n())
 
+# contruct boxplot chart to identify outliers
 ggplot(windspeed_jul,aes(x=wind_speed,y=windspeed_count))+geom_boxplot()
 
+# contruct scatterplot chart to see the distribution of windspeed
 ggplot(windspeed_jul,aes(x=wind_speed,y=windspeed_count))+geom_point()
 
+
+# 2nd question - What is the relationship between `dewp` and `humid`?
+
+# contruct scatterplot chart to see the relationship between dewp and humid
 ggplot(weather,aes(x=dewp,y=humid))+geom_point()
 
-#2
+# run correlation between dewp and humid to see the relationship
 correl1 <- cor(weather$dewp, weather$humid, use = "pairwise.complete.obs")
 
 correl1
 
-#3
+
+# 3rd question - What is the relationship between `precip` and `visib`?
+
+# run correlation between precip and visib to see the relationship
 correl2 <- cor(weather$precip, weather$visib, use = "pairwise.complete.obs")
 
 correl2
@@ -193,12 +226,17 @@ library(tidyverse)
 library(nycflights13)
 library(skimr)
 
-# question 1
+# 1st question - How many planes have a missing date of manufacture?
+
+# planes with missing date of manufacture
 planes %>%
   filter(is.na(year)) %>%
   summarise(count = n())
 
-# question 2
+
+# question 2 - What are the five most common manufacturers?
+
+# five most common manufacturers
 manufacturers <- planes %>%
   group_by(manufacturer) %>%
   summarise(man_count = n()) %>%
@@ -207,14 +245,17 @@ manufacturers <- planes %>%
 
 manufacturers
 
-# question 3 -   Has the distribution of manufacturer changed over time as reflected by the airplanes flying from NYC in 2013? (Hint: you may need to use case_when() to recode the manufacturer name and collapse rare vendors into a category called Other.)
 
+# question 3 - Has the distribution of manufacturer changed over time as reflected by the airplanes flying from NYC in 2013?
+
+# count of manufacturers
 manufs <- planes %>%
   group_by(manufacturer) %>%
   summarise(man_count = n())
 
 manufs
 
+# replace manufacturers' names with "OTHER" if they have manufactured less than 10 planes throught all period
 cons_manufacturers <- manufs %>%
   mutate(manufacturer = case_when(man_count < 10 ~ "OTHER",TRUE ~ manufacturer)) %>%
   group_by(manufacturer) %>%
@@ -222,17 +263,20 @@ cons_manufacturers <- manufs %>%
 
 cons_manufacturers
 
+# add new column in the initial dataset and replace manufacturers' names with the ones from "cons_manufacturers". if there is no match, then replace with "OTEHR"
 new_dataset <- planes %>%
   mutate(new_column = ifelse(manufacturer %in% cons_manufacturers$manufacturer,manufacturer, "OTHER"))
 
 new_dataset
 
+# group by new manufacturers names and year, and count
 cons_newdataset <- new_dataset %>%
   group_by(new_column,year) %>%
   summarise(count = n())
 
 cons_newdataset
 
+# create multiple plots per manufacturer and display count of manufactured planes throughout years
 ggplot(cons_newdataset, aes(x = year, y = count)) +
   geom_point() +
   facet_wrap(~ new_column, scales = "free")
@@ -251,24 +295,31 @@ library(tidyverse)
 library(nycflights13)
 library(skimr)
 
-#1
+# 1st question - What is the oldest plane (specified by the tailnum variable) that flew from New York City airports in 2013?
+
+# filter by tailnum and manufacture year
 filtered <- planes %>%
   select(tailnum, man_year = year)
 
 filtered
 
+# oldest plane that flew from New York City airports in 2013
 inner_join(flights,filtered,by = "tailnum") %>%
   filter(origin =="JFK"|origin =="EWR"|origin =="LGA") %>%
   select(tailnum, man_year) %>%
   distinct(tailnum,man_year) %>%
   slice_min(man_year)
 
-#2
+
+# 2nd question - How many airplanes that flew from New York City are included in the planes table?
+
+# filter of the airplanes that flew from New York City
 nyc_filtered <- flights %>%
   filter(origin =="JFK"|origin =="EWR"|origin =="LGA") %>%
   select(tailnum) %>%
   distinct(tailnum)
 
+# number of airplanes that flew from New York City in the planes table
 inner_join(planes, nyc_filtered, by = "tailnum") %>%
   summarise(count=n())
 ```
@@ -285,15 +336,20 @@ library(tidyverse)
 library(nycflights13)
 library(skimr)
 
-#1
+# 1st question - What is the median arrival delay on a month-by-month basis in each airport?
+
+# median arrival delay on a month-by-month basis in each airport
 grouped_delay <- flights %>%
   select(month, dest, arr_delay) %>%
   group_by(dest, month) %>%
   summarise(median = median(arr_delay))
 
 grouped_delay
+
   
-#2
+# 2nd question - What is the median arrival delay on a month-by-month basis in each airport?
+
+# median arrival delay on a month-by-month basis, per carrier in each origin airport
 airline_median <- flights %>%
   select(month, origin, arr_delay, carrier) %>%
   group_by(carrier, month, origin) %>%
@@ -301,6 +357,7 @@ airline_median <- flights %>%
 
 airline_median
 
+# bar chart of median arrival delay for each month and origin airport and each airline
 ggplot(airline_median, aes(x = month, y = median)) +
   geom_col() +
   facet_wrap(vars(carrier, origin))
@@ -313,23 +370,26 @@ library(tidyverse)
 library(nycflights13)
 library(skimr)
 
+# join flights and airlines by carrier and count names
 named_flights <- inner_join(flights, airlines, by = "carrier") %>%
   group_by(name) %>%
-  mutate(count_total = n()) 
+  mutate(count_total = n())
 
+named_flights
+
+# filter SFO destination to count names. after that, leave only names, count of names that flew to SFO and total count
 filtered <- named_flights %>%
   filter(dest =="SFO") %>%
   select(name,count_total) %>%
   mutate(count = n()) %>%
   distinct(name,count,count_total)
 
-
 filtered
 
+# calculate percenatge
 fly_into_sfo <- filtered %>%
   mutate(percent = round(count*100/count_total,2)) %>%
   select(name,count,percent)
-
 
 fly_into_sfo
 
@@ -424,7 +484,7 @@ The age gaps dataset includes "gender" columns, which always contain the values 
 The following is a data dictionary of the variables used
 
 | variable            | class     | description                                                                                             |
-|:-----------------|:-----------------|:------------------------------------|
+|:-----------------|:-----------------|:-----------------------------------|
 | movie_name          | character | Name of the film                                                                                        |
 | release_year        | integer   | Release year                                                                                            |
 | director            | character | Director of the film                                                                                    |
@@ -445,22 +505,29 @@ age_gaps <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/t
 
 age_gaps
 
-#1
+
+# 1st question - How is age_difference distributed? What's the 'typical' age_difference in movies?
+
+# count age difference
 distribution <- age_gaps %>%
   group_by(age_difference) %>%
   summarise(count = n())
 
 distribution
 
-
+# run a barchart for the distribution of age difference
 ggplot(distribution,aes(x=age_difference,y=count))+geom_col()
 
+# 'typical' age_difference in movies
 mode <- distribution %>%
   slice_max(count)
   
 mode
 
-#2
+
+# 2nd question - How frequently does half plus seven rule apply in this dataset?
+
+# half plus seven rule frequence in this dataset
 rule <- age_gaps %>%
   mutate(first_cond = ((actor_2_age/2 +7) < actor_1_age) & ((actor_2_age-7) *2) > actor_1_age) %>%
   select(first_cond) %>%
@@ -469,8 +536,10 @@ rule <- age_gaps %>%
             
 rule
 
-#3
 
+# 3rd question - Which movie has the greatest number of love interests?
+
+# movie with the greatest number of love interests
 movie <- age_gaps %>%
   group_by(movie_name) %>%
   summarise(count = n()) %>%
@@ -478,7 +547,10 @@ movie <- age_gaps %>%
 
 movie
 
-#4
+
+# 4th question - Which actors/ actresses have the greatest number of love interess in this dataset?
+
+# count of actor_1_names
 actor_1 <- age_gaps %>%
   select(actor_name=actor_1_name) %>%
   group_by(actor_name) %>%
@@ -486,7 +558,7 @@ actor_1 <- age_gaps %>%
   
 actor_1
 
-
+# count of actor_2_names
 actor_2 <- age_gaps %>%
   select(actor_name=actor_2_name) %>%
   group_by(actor_name) %>%
@@ -494,6 +566,7 @@ actor_2 <- age_gaps %>%
 
 actor_2
 
+# merge 2 datasets and replace NAs with 0
 result <- merge(actor_1, actor_2, by = "actor_name", all= TRUE, incomparables = NA )
 
 result <- result[is.na(result$count_1) | is.na(result$count_2), ]
@@ -502,18 +575,22 @@ result[is.na(result)] <- 0
 
 result
 
+# create new column with sum of count_1 and count_2
 result <- result %>%
   group_by(actor_name) %>%
   mutate(total = count_1 + count_2)
 
+# remove duplicates and arrange in descending order
 distinct_result <- result[!duplicated(result$actor_name), ] %>%
   select(total) %>%
   arrange(desc(total))
 
 distinct_result 
 
-#5
 
+# 5th question - Is the mean/median age difference staying constant over the years (1935 - 2022)?
+
+# filter 1935-2022 years and leave years, median of age difference and mean of age difference
 year_1935_2022 <- age_gaps %>%
   filter(release_year <= 2022 & release_year >= 1935) %>%
   group_by(release_year) %>%
@@ -521,11 +598,16 @@ year_1935_2022 <- age_gaps %>%
 
 year_1935_2022
 
+# plot line chart for means
 ggplot(year_1935_2022,aes(x=release_year, y=mean)) + geom_line()
+
+# plot line chart for medians
 ggplot(year_1935_2022,aes(x=release_year, y=median)) + geom_line()
 
-#6
 
+# 6th question - How frequently does Hollywood depict same-gender love interests?
+
+# count number of same-gender love interests
 same_gender <- age_gaps %>%
   filter(character_1_gender == character_2_gender) %>%
   summarise(count=n())
