@@ -188,7 +188,12 @@ mass_shootings %>%
 -   Assess the relationship between mental illness and total victims, mental illness and location type, and the intersection of all three variables.
 
 ```{r}
+library(GGAlly)
 
+mass_shootings %>%
+ select(prior_mental_illness, location_type, total_victims) %>%
+ drop_na(prior_mental_illness) %>%
+ ggpairs()
 
 ```
 
