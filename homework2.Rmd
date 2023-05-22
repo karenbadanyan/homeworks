@@ -3,6 +3,10 @@ title: "Homework 2"
 author: "Karen Badanyan"
 date: "`r Sys.Date()`"
 output:
+  word_document:
+    toc: yes
+  pdf_document:
+    toc: yes
   html_document:
     theme: flatly
     highlight: zenburn
@@ -10,8 +14,6 @@ output:
     toc: yes
     toc_float: yes
     code_folding: show
-  pdf_document:
-    toc: yes
 ---
 ---
 
@@ -78,6 +80,7 @@ glimpse(mass_shootings)
 -   Generate a data frame that summarizes the number of mass shootings per year.
 
 ```{r}
+# number of mass shootings per year
 mass_shootings %>%
   group_by(year) %>%
   summarise(count = n())
@@ -87,16 +90,16 @@ mass_shootings %>%
 -   Generate a bar chart that identifies the number of mass shooters associated with each race category. The bars should be sorted from highest to lowest and each bar should show its number.
 
 ```{r}
-race_count <- mass_shootings %>%
+# number of mass shooters associated with each race category
+mass_shootings %>%
   group_by(race) %>%
   summarise(count = n()) %>%
-  na.omit(count)
-  
-race_count
-
-race_count %>%
+  na.omit(count) %>%
   mutate(race = fct_reorder(race,count)) %>%
-  ggplot(aes(x=count,y=race))+geom_col()+geom_text(aes(label = count), vjust = -0.5, color = "red", size = 4)
+  ggplot(aes(x=count,y=race))+geom_col()+geom_text(aes(label = count), vjust = -0.5, color = "red", size = 4) + 
+  xlab("Number of Mass Shooters") +
+  ylab("Race") +
+  ggtitle("Dominance of White Race in the Number of Mass Shooters")
 ```
 
 -   Generate a boxplot visualizing the number of total victims, by type of location.
@@ -104,29 +107,36 @@ race_count %>%
 ```{r}
 # all categories
 mass_shootings %>%
-  select(location_type,total_victims) %>%
   mutate(location_type = fct_reorder(location_type,total_victims)) %>%
-  ggplot(aes(x=location_type,y=total_victims))+geom_boxplot()
+  ggplot(aes(x=location_type,y=total_victims))+geom_boxplot() +
+  xlab("Location") +
+  ylab("Number of Victims") +
+  ggtitle("Number of Victims per Location Type")
 
 # without "other" location_type
 mass_shootings %>%
   filter(location_type != "Other") %>%
-  select(location_type, total_victims) %>%
   mutate(location_type = fct_reorder(location_type, total_victims)) %>%
   ggplot(aes(x = location_type, y = total_victims)) +
-  geom_boxplot()
+  geom_boxplot() +
+  xlab("Location") +
+  ylab("Number of Victims") +
+  ggtitle("Number of Victims per Location Type")
 ```
 
 
 -   Redraw the same plot, but remove the Las Vegas Strip massacre from the dataset.
 
 ```{r}
+# without the Las Vegas Strip massacre
 mass_shootings %>%
   filter(case != "Las Vegas Strip massacre") %>%
-  select(location_type, total_victims) %>%
   mutate(location_type = fct_reorder(location_type, total_victims)) %>%
   ggplot(aes(x = location_type, y = total_victims)) +
-  geom_boxplot()
+  geom_boxplot() +
+  xlab("Location") +
+  ylab("Number of Victims") +
+  ggtitle("Number of Victims per Location Type")
 ```
 
 ### More open-ended questions
@@ -136,6 +146,7 @@ Address the following questions. Generate appropriate figures/tables to support 
 -   How many white males with prior signs of mental illness initiated a mass shooting after 2000?
 
 ```{r}
+# filter white males with prior signs of mental illness after Year 2000
 mass_shootings %>%
   filter(male & race == "White" & prior_mental_illness == "Yes" & year >  2000) %>%
   summarise(count = n())
@@ -144,32 +155,35 @@ mass_shootings %>%
 -   Which month of the year has the most mass shootings? Generate a bar chart sorted in chronological (natural) order (Jan-Feb-Mar- etc) to provide evidence of your answer.
 
 ```{r}
-
+# assign month order
 month_order <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
                  "Aug", "Sep", "Oct", "Nov", "Dec")
 
+# group by month for count and order chronologically
 mass_shootings %>%
   group_by(month) %>%
   summarise(count = n()) %>%
   mutate(month = factor(month, levels = month_order)) %>%
   ggplot(aes(x = month, y = count)) +
-  geom_col()
+  geom_col() +
+  xlab("Month") +
+  ylab("Number of Victims") +
+  ggtitle("Number of Victims per Month")
   
-
 ```
 
 -   How does the distribution of mass shooting fatalities differ between White and Black shooters? What about White and Latino shooters?
 
 ```{r}
+# distribution of mass shooting fatalities for White, Black and Latino
 mass_shootings %>%
   filter(race == "White" | race == "Black" | race == "Latino") %>%
   group_by(race, year) %>%
   summarise (fatalities = sum(fatalities)) %>%
-  ggplot(aes(x=year,y=fatalities))+geom_line(aes(colour = race))
-
-  
-
-
+  ggplot(aes(x=year,y=fatalities))+geom_line(aes(colour = race)) +
+  xlab("Year") +
+  ylab("Fatalities") +
+  ggtitle("White Fatalities above the others throughout the Years")
 
 ```
 
@@ -182,13 +196,21 @@ mass_shootings %>%
   filter(prior_mental_illness == "Yes" | prior_mental_illness == "No") %>%
   group_by(prior_mental_illness, year) %>%
   summarise (count = n()) %>%
-  ggplot(aes(x=year,y=count))+geom_col(aes(colour = prior_mental_illness))
+  ggplot(aes(x=year,y=count))+geom_col(aes(colour = prior_mental_illness)) +
+  xlab("Year") +
+  ylab("Number of Shooters") +
+  ggtitle("People with Mental Ilness have more tendency to Mass Shootings")
 ```
 
 -   Assess the relationship between mental illness and total victims, mental illness and location type, and the intersection of all three variables.
 
 ```{r}
+library (GGally)
 
+mass_shootings %>%
+ select(prior_mental_illness, location_type, total_victims) %>%
+ drop_na(prior_mental_illness) %>%
+ ggpairs()
 
 ```
 
@@ -239,7 +261,6 @@ The data dictionary is as follows
 
 ```{r}
 card_fraud %>%
-  select(trans_year, is_fraud) %>%
   group_by(trans_year) %>%
   mutate(fraud = sum(is_fraud)) %>%
   group_by(trans_year, fraud) %>%
@@ -247,6 +268,7 @@ card_fraud %>%
   mutate(percent = round(100 * fraud / count, 2)) %>%
   ggplot(aes(x = trans_year, y = count, fill = factor(fraud))) +
   geom_bar(stat = "identity", position = "stack") +
+  # add percentage of fraudulent transactions
   geom_text(aes(label = paste0(percent, "%")), position = position_stack(vjust = 0.5), color = "white") +
   scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "gray")) +
   xlab("Year") +
@@ -261,7 +283,6 @@ card_fraud %>%
 
 ```{r}
 card_fraud %>%
-  select(trans_year, is_fraud,amt) %>%
   mutate(fraud_amt = is_fraud * amt) %>%
   group_by(trans_year) %>%
   mutate(fraud_total = sum((fraud_amt))) %>%
@@ -280,13 +301,13 @@ card_fraud %>%
 library(scales)
 
 card_fraud %>%
-  select(trans_year, is_fraud, amt) %>%
   mutate(fraud = round(is_fraud * amt, 0)) %>%
   group_by(trans_year) %>%
   mutate(fraud_per_year = sum(fraud), total_amt = round(sum(amt), 0)) %>%
   distinct(trans_year, fraud_per_year, total_amt) %>%
   ggplot() +
   geom_bar(aes(x = trans_year, y = total_amt, fill = "Total Amount"), stat = "identity", width = 0.8) +
+  # add Fraud Amount per Year in the Total Amount column
   geom_bar(aes(x = trans_year, y = fraud_per_year, fill = "Fraud Amount"), stat = "identity", width = 0.4) +
   geom_text(aes(x = trans_year, y = total_amt, label = comma(total_amt)), vjust = -0.5, color = "black", size = 4, position = position_dodge(width = 0.8)) +
   geom_text(aes(x = trans_year, y = fraud_per_year, label = comma(fraud_per_year)), vjust = -0.5, color = "black", size = 4, position = position_dodge(width = 0.4)) +
@@ -303,19 +324,24 @@ card_fraud %>%
 -   What types of purchases are most likely to be instances of fraud? Consider category of merchants and produce a bar chart that shows % of total fraudulent transactions sorted in order.
 
 ```{r}
-# problem
 card_fraud %>%
-  select(category, is_fraud) %>%
-  mutate(total_txns = n()) %>%
-  group_by(category) %>%
-  mutate(fraud_txns = n()) %>%
-  distinct(category,total_txns,fraud_txns) %>%
-  mutate(percent = round(100*fraud_txns/total_txns,2)) %>%
-  mutate(category = fct_reorder(category, -percent)) %>%
-  ggplot(aes(x=percent,y=category))+geom_col()+geom_text(aes(label = percent), vjust = 0.5, color = "#5989e3", size = 4) +
+  group_by(category, is_fraud) %>%
+  summarise(total_txns = n(),
+         total_amounts = sum(amt)) %>% 
+  mutate(percent_total_txns =  round(total_txns/sum(total_txns),2),
+         percent_amounts = round(total_amounts/sum(total_amounts),4)) %>% 
+  ungroup() %>% 
+  filter(is_fraud == 1) %>% 
+  mutate(category = fct_reorder(category, percent_amounts)) %>% 
+  ggplot()+
+  aes(x=percent_amounts, y = category) +
+  geom_col() +
+  geom_text(aes(label = scales::percent(percent_amounts)),hjust = 0.5, color = "red") + 
+  scale_x_continuous(labels = scales::percent) +
   xlab("Percentage") +
   ylab("Category") +
   ggtitle("Fraud Percentage per Category")
+
 ```
 
 -   When is fraud more prevalent? Which days, months, hours? To create new variables to help you in your analysis, we use the `lubridate` package and the following code
@@ -340,14 +366,11 @@ mutate(
 ```{r}
 library(lubridate)
 
-card_fraud <- read_csv(here::here("data", "card_fraud.csv"))
-
 card_fraud %>%
   mutate(date_only = lubridate::date(trans_date_trans_time),
   month_name = lubridate::month(trans_date_trans_time, label=TRUE),
   hour = lubridate::hour(trans_date_trans_time),
   weekday = lubridate::wday(trans_date_trans_time, label = TRUE)) %>%
-  select(month_name,hour,weekday,is_fraud) %>%
   group_by(month_name) %>%
   summarise(month_fraud = sum(is_fraud)) %>%
   slice_max(month_fraud)
@@ -358,7 +381,6 @@ card_fraud %>%
   month_name = lubridate::month(trans_date_trans_time, label=TRUE),
   hour = lubridate::hour(trans_date_trans_time),
   weekday = lubridate::wday(trans_date_trans_time, label = TRUE)) %>%
-  select(month_name,hour,weekday,is_fraud) %>%
   group_by(hour) %>%
   summarise(hour_fraud = sum(is_fraud)) %>%
   slice_max(hour_fraud)
@@ -368,7 +390,6 @@ card_fraud %>%
   month_name = lubridate::month(trans_date_trans_time, label=TRUE),
   hour = lubridate::hour(trans_date_trans_time),
   weekday = lubridate::wday(trans_date_trans_time, label = TRUE)) %>%
-  select(month_name,hour,weekday,is_fraud) %>%
   group_by(weekday) %>%
   summarise(day_fraud = sum(is_fraud)) %>%
   slice_max(day_fraud)
@@ -408,6 +429,7 @@ card_fraud <- card_fraud %>%
     distance_km = 6377.830272 * acos((sin(lat1_radians) * sin(lat2_radians)) + cos(lat1_radians) * cos(lat2_radians) * cos(long2_radians - long1_radians))
 
   )
+
 card_fraud %>%
   mutate(distance_km = round(distance_km,0)) %>%
   group_by(distance_km) %>%
@@ -524,7 +546,6 @@ new_dataset1 <- left_join (co2_percap_new,gdp_percap_new,by = "iso3c") %>%
 energy_new_reformed <- energy_new %>%
   mutate(iso3c = iso_code,per_capita_electricity_per_day = per_capita_electricity/365)
   
-
 new_dataset2 <- left_join(energy_new_reformed,co2_percap_new,by = "iso3c") %>%
   mutate(logic = year.x == year.y) %>%
   filter(logic == "TRUE")
