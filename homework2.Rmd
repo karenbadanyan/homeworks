@@ -304,17 +304,26 @@ card_fraud %>%
 
 ```{r}
 # problem
+
+# Mutates are computationally inefficient.. you want to summarise to get totals first 
+# and then mutate to get %. How about the following code
+
 card_fraud %>%
-  select(category, is_fraud) %>%
-  mutate(total_txns = n()) %>%
-  group_by(category) %>%
-  mutate(fraud_txns = n()) %>%
-  distinct(category,total_txns,fraud_txns) %>%
-  mutate(percent = round(100*fraud_txns/total_txns,2)) %>%
-  mutate(category = fct_reorder(category, -percent)) %>%
-  ggplot(aes(x=percent,y=category))+geom_col()+geom_text(aes(label = percent), vjust = 0.5, color = "#5989e3", size = 4) +
-  xlab("Percentage") +
-  ylab("Category") +
+  group_by(category, is_fraud) %>%
+  summarise(total_txns = n(),
+         total_amounts = sum(amt)) %>% 
+  mutate(percent_total_txns =  total_txns/sum(total_txns),
+         percent_amounts = total_amounts/sum(total_amounts)) %>% 
+  ungroup() %>% 
+
+# assuming you want to show % of amounts
+  
+  filter(is_fraud == 1) %>% 
+  mutate(category = fct_reorder(category, percent_amounts)) %>% 
+  ggplot()+
+  aes(x=percent_amounts, y = category)+
+  geom_col()+
+  scale_x_continuous(labels = scales::percent)
   ggtitle("Fraud Percentage per Category")
 ```
 
