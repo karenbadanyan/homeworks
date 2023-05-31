@@ -52,11 +52,11 @@ You can [search and explore the results](https://news.sky.com/story/westminster-
 The database made available by Simon Willison is an `SQLite` database
 
 ```{r}
+# Establish a connection to a SQLite database
 sky_westminster <- DBI::dbConnect(
-  drv = RSQLite::SQLite(),
-  dbname = here::here("data", "sky-westminster-files.db")
+  drv = RSQLite::SQLite(), # Use the SQLite driver for the connection
+  dbname = here::here("data", "sky-westminster-files.db")  # Specify the path to the database file
 )
-
 ```
 
 How many tables does the database have?
@@ -74,13 +74,6 @@ parties_db <- dplyr::tbl(sky_westminster, "parties")
 party_donations_db <- dplyr::tbl(sky_westminster, "party_donations")
 payments_db <- dplyr::tbl(sky_westminster, "payments")
 
-
-appg_donations_db
-appgs_db
-member_appgs_db
-members_db
-parties_db
-party_donations_db
 ```
 
 ## Which MP has received the most amount of money? 
@@ -88,15 +81,18 @@ party_donations_db
 You need to work with the `payments` and `members` tables and for now we just want the total among all years. To insert a new, blank chunk of code where you can write your beautiful code (and comments!), please use the following shortcut: `Ctrl + Alt + I` (Windows) or `cmd + option + I` (mac)
 
 ```{r}
+# Set up a connection to the 'payments' and 'members' tables in the 'sky_westminster' database
 members_db <- dplyr::tbl(sky_westminster, "members")
 payments_db <- dplyr::tbl(sky_westminster, "payments")
 
+# Create a new table 'reformed_members_db' by adding a new column 'member_id' to 'members_db'
 reformed_members_db <- members_db %>%
   mutate(member_id = id)
 
 payments_members_db_table <- left_join(payments_db,reformed_members_db,by = "member_id") %>%
   collect()
 
+# Arrange the data in descending order of 'amount_of_money'
 payments_members_db_table %>%
   group_by(member_id,name) %>%
   summarise(amount_of_money = sum(value)) %>%
@@ -121,10 +117,10 @@ five_percent_donation <- payments_db_table %>%
   filter (percent > 0.05) %>%
   collect ()
 
-# entities with more than 5% payments to MPs
+# Entities with more than 5% payments to MPs
 five_percent_donation
 
-# list of MPs entities they provided funds to 
+# List of MPs entities they provided funds to 
 left_join(payments_db_table,five_percent_donation,by = "entity") %>%
   filter(complete.cases(percent)) %>%
   distinct(member_id)
@@ -141,6 +137,7 @@ payments_db_table %>%
   distinct(entity) %>%
   summarise(count = n())
 
+# Number and % donated to MPs belonging to a single party only
 payments_db_table %>%
   mutate(total_entity = n_distinct(entity)) %>%
   group_by(entity,total_entity) %>%
@@ -161,7 +158,7 @@ I would like you to write code that generates the following table.
 ```{r echo=FALSE, out.width="80%"}
 knitr::include_graphics(here::here("images", "total_donations_table.png"), error = FALSE)
 
-
+# Set up a connection to the 'party_donations' table in the 'sky_westminster' database,then mutate the 'date' column by extracting only the first 4 characters,and finally collect the results into a data frame
 party_donations_db_table <- dplyr::tbl(sky_westminster, "party_donations") %>%
   mutate(date = substr(date, 1, 4)) %>%
   collect ()
@@ -196,8 +193,7 @@ knitr::include_graphics(here::here("images", "total_donations_graph.png"), error
 library(ggplot2)
 
 donations_table %>%
-  ggplot(aes(x = date, y = total_year_donations, fill = fct_reorder(name, -total_year_donations))) + 
-  geom_col(position = "dodge") + 
+  ggplot(aes(x = date, y = total_year_donations, fill = fct_reorder(name, -total_year_donations))) + geom_col(position = "dodge") + 
   xlab("") +
   ylab("") +
   ggtitle("Conservatives have captured the majority of political donations") +
@@ -236,6 +232,7 @@ toc() # stop timer
 
 head(cdc_data)
 
+# Error with this problem set. As discussed I am skipping this one!
 glimpse(cdc_data)
 ```
 Can you query the database and replicate the following plot?
@@ -326,6 +323,7 @@ contributions_tables <- base_url %>%
   html_table() %>% # Parse an html table into a dataframe
   data.frame()
 
+contributions_tables
 ```
 
 - First, make sure you can scrape the data for 2022. Use janitor::clean_names() to rename variables scraped using `snake_case` naming. 
@@ -333,11 +331,10 @@ contributions_tables <- base_url %>%
 install.packages("janitor")
 
 library(janitor)
+library(snakecase)
 
 # Clean and convert column names to snake case
-contributions_tables <- contributions_tables %>%
-  janitor::clean_names() %>%
-  snakecase::to_any_case()
+contributions_tables <- janitor::clean_names(contributions_tables, case = "snake")
 
 ```
 
@@ -517,8 +514,9 @@ url <- str_c(cons_url, page)
 library(stringr)
 library(rvest)
 
+# Define a function called 'scrape_jobs_new' that takes a 'page' argument
 scrape_jobs_new <- function(page) {
-  cons_url_new <- str_c("https://www.consultancy.uk/jobs/page/", page)
+  cons_url_new <- str_c("https://www.consultancy.uk/jobs/page/", page) # Create a URL based on the page number
   
   cons_listings <- cons_url_new %>%
     read_html() %>%
