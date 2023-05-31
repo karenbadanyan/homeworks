@@ -510,59 +510,60 @@ df
     -   Given that you have to scrape `...jobs/page/1`, `...jobs/page/2`, etc., define your URL so you can join multiple stings into one string, using `str_c()`. For instnace, if `page` is 5, what do you expect the following code to produce?
     
 ```
-cons_url <- "https://www.consultancy.uk/jobs/page/1"
-url <- str_c(cons_url, page)
-```
-```{r}
-library(stringr)
-library(rvest)
+get_listings <- function(page) {
+  
+  base_url <- "https://www.consultancy.uk/jobs/page/"
+  url <- str_c(base_url, page)
+  listings_html <- read_html(url)
+  
+  
+  job <- listings_html %>%
+    html_nodes(css = "span.title") %>%
+    html_text2() 
+  
+  firm <- listings_html %>%
+    html_nodes(css = ".hide-phone .row-link") %>%
+    html_text2() 
 
-scrape_jobs_new <- function(page) {
-  cons_url_new <- str_c("https://www.consultancy.uk/jobs/page/", page)
+  link <- listings_html %>%
+    html_nodes(css = ".hide-phone .row-link") %>%
+    html_attr('href') %>%
+    str_c("https://www.consultancy.uk", .)
   
-  cons_listings <- cons_url_new %>%
-    read_html() %>%
-    html_nodes(css = "table") %>% 
-    html_table() %>% 
-    data.frame()
+    
+  functional_area <- listings_html %>%
+    html_elements(css = ".initial") %>%
+    html_text2() 
   
-  return(cons_listings)
+  type <- listings_html %>%
+    html_nodes(css = ".hide-tablet-landscape .row-link") %>%
+    html_text2() 
+
+
+  jobs_df <- tibble(
+    job = job,
+    firm     = firm,
+    functional_area     = functional_area,
+    type    = type,
+    link = link
+  ) 
+  
+    return(jobs_df)
 }
 
-page <- 2
-df <- scrape_jobs_new(page)
-df
-```
 
--   Construct a vector called `pages` that contains the numbers for each page available
-```{r}
-pages <- 1:8
+pages <- 1:8 # apply to the first 8 pages; if more, change to 1:X 
+jobs <- map_df(pages, get_listings)
 
-```
+glimpse(jobs)
 
+jobs %>% 
+  count(firm, sort=TRUE)
 
--   Map the `scrape_jobs()` function over `pages` in a way that will result in a data frame called `all_consulting_jobs`.
-```{r}
-scrape_jobs_new <- function(page) {
-  cons_url_new <- str_c("https://www.consultancy.uk/jobs/page/", page)
-  
-  cons_listings <- cons_url_new %>%
-    read_html() %>%
-    html_nodes(css = "table") %>% 
-    html_table() %>% 
-    data.frame()
-  
-  return(cons_listings)
-}
-
-# Scrape listings for each page
-all_consulting_jobs <- data.frame()
-for (page in pages) {
-  df2 <- scrape_jobs_new(page)
-  all_consulting_jobs <- rbind(all_consulting_jobs, df2)
-}
-
-all_consulting_jobs
+jobs %>% 
+  count(functional_area, sort=TRUE) %>%
+  filter(functional_area != "Unknown") %>% 
+  mutate(perc = n/sum(n))
 ```
 
 -   Write the data frame to a csv file called `all_consulting_jobs.csv` in the `data` folder.
